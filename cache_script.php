@@ -5,19 +5,15 @@
  * 
  * This script allows for independent caching of each files of a page via a specific GET url
  * 
- * 
- * 
- * 
- * 
  */
-
+ob_start();
 require_once 'cache_service.class.php';
 $filename = $_GET['file'];
 $memkey = $_GET['memkey'];
 
 
 //Sanitizing the $_GET['memkey']
-if(strlen($memkey) == 32 && ctype_xdigit($memkey)){
+if(isset($memkey) && strlen($memkey) == 32 && ctype_xdigit($memkey)){
     $params = CacheService::getFromMemcache($memkey);
     if(!isset($params) || !is_array($params)){
         //bad request 400
@@ -65,37 +61,38 @@ switch ($ext){
         die;
 }
 
-if(! file_exists($filename)){
+if(!file_exists($filename)){
     //not found 404
     CacheService::httpResponseHeader(404);
     die;
-}elseif(! is_readable($filename)){
+}elseif(!is_readable($filename)){
     //unauthorized 401
     CacheService::httpResponseHeader(401);
     die;
 }else{
-    header('ETag: "'. $eTag .'"');
-    header('Last-Modified: '. $last_modified->format(DATE_RFC2822));
-    header("Expires: " . $expires->format(DATE_RFC2822));
-    header("Cache-Control: private"); 
-    header("Cache-Control: max-age=" . (string)($timestamp - time()));
+    $eTag = $params['eTag'];
+    $last_modified_cache = $params['last_modified'];
+    $last_modified = new DateTime('@' . (string)filemtime($filename));
+    $expires = $params['expires'];
+    $max_age = $params['max_age'];
+    $control = $params['control'];
+    $lang = $params['lang'];
+    CacheService::sendResponseHeaders($eTag, $last_modified, $expires, $control, $max_age, $lang);
 
-    if(isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) || isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
-        if ($_SERVER['HTTP_IF_MODIFIED_SINCE'] == $last_modified || str_replace('"', '', stripslashes($_SERVER['HTTP_IF_NONE_MATCH'])) == $eTag) {
+    if(isset($last_modified_cache) || isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
+        if ($last_modified_cache == $last_modified || str_replace('"', '', stripslashes($_SERVER['HTTP_IF_NONE_MATCH'])) == $eTag) {
             header('HTTP/1.1 304 Not Modified');
             exit();
         }
+        if($last_modified_cache != $last_modified){
+            $params['last_modified'] = $last_modified;
+            CacheService::setToMemcache($params, $memkey, $params['memcache_expire']);
+        }
     }
-
-    header("Content-type: image/jpeg");
+    header("Content-type: $mime");
 }
 
-header('Content-Type: application/octet-stream');
-header('Content-Disposition: attachment; filename=' . basename($filename));
-header('Content-Transfer-Encoding: binary');
-header("Expires: Sat, 20 Oct 2015 00:00:00 GMT");
-header("Cache-Control: max-age=2692000, public"); 
-header("Pragma: cache"); 
+
 ob_clean();
 flush();
 readfile($filename);
