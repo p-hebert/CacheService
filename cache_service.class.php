@@ -43,7 +43,8 @@ class CacheService {
      * http://php.net/manual/en/function.http-response-code.php for list of codes.
      * @param int $code
      */
-    static function httpResponseHeader($code){
+    static function httpResponseHeader($code)
+    {
         http_response_code($code);
     }
     
@@ -51,7 +52,8 @@ class CacheService {
      * Returns both request and response headers.
      * @return assoc_array
      */
-    static function getAllClientHeaders(){
+    static function getAllClientHeaders()
+    {
         return [
                     'request'=> self::getRequestHeaders(),
                     'response'=> self::getResponseHeaders()
@@ -62,7 +64,8 @@ class CacheService {
      * Wrapper function for apache_request_headers
      * @return assoc_array
      */
-    static function getRequestHeaders(){
+    static function getRequestHeaders()
+    {
         return apache_request_headers();
     }
     
@@ -70,7 +73,8 @@ class CacheService {
      * Wrapper function for apache_response_headers
      * @return assoc_array
      */
-    static function getResponseHeaders(){
+    static function getResponseHeaders()
+    {
         return apache_response_headers();
     }
     
@@ -81,7 +85,8 @@ class CacheService {
      * @param string $key 
      * @param timestamp $time Time before the element becomes expired
      */
-    static function setToMemcache($element, $key, $time){
+    static function setToMemcache($element, $key, $time)
+    {
         $cache = new phpFastCache("memcache");
         $cached_element = $cache->get($key);
         if($cached_element !== $element){
@@ -94,7 +99,8 @@ class CacheService {
      * @param string $key
      * @return false|mixed
      */
-    static function getFromMemcache($key){
+    static function getFromMemcache($key)
+    {
         $cache = new phpFastCache("memcache");
         $cached_element = $cache->get($key);
         if(!isset($cached_element)){
@@ -109,7 +115,8 @@ class CacheService {
      * @param string $key
      * @param int $code
      */
-    static function responseIfHasInMemcache($key, $code){
+    static function responseIfHasInMemcache($key, $code)
+    {
         $cached = CacheService::getFromMemcache($key);
         if($cached !== false){
             CacheService::httpResponseHeader($code);
